@@ -77,6 +77,16 @@ APPS_FOR_TESTING = (
     'ebpub.utils',
 )
 
+APPS_NOT_FOR_TESTING = (
+        # the user model used is custom.
+        'django.contrib.auth',
+        # this makes too many weird assumptions about the database underpinnings
+        'django.contrib.contenttypes',
+        # these tests break with some settings, see https://github.com/peterbe/django-static/issues#issue/8 and 9
+        'django_static',
+)
+
+
 INSTALLED_APPS = INSTALLED_APPS + APPS_FOR_TESTING
 
 TEST_RUNNER = 'obadmin.testrunner.TestSuiteRunner'
@@ -120,6 +130,9 @@ required_settings.append('DEFAULT_MAP_CENTER_LON')
 required_settings.append('DEFAULT_MAP_CENTER_LAT')
 required_settings.append('DEFAULT_MAP_ZOOM')
 
+# How many days of news to show on many views.
+required_settings.append('DEFAULT_DAYS')
+
 EB_MEDIA_ROOT = OBDEMO_DIR + '/media' # necessary for static media versioning
 EB_MEDIA_URL = '' # leave at '' for development
 required_settings.extend(['EB_MEDIA_URL', 'EB_MEDIA_ROOT'])
@@ -131,11 +144,6 @@ EB_TODAY_OVERRIDE = None
 # Used only by ebgeo/maps/tess.py
 SHAPEFILE_ROOT = ''
 required_settings.append('SHAPEFILE_ROOT')
-
-# For the 'autoversion' template tag.
-required_settings.append('AUTOVERSION_STATIC_MEDIA')
-AUTOVERSION_STATIC_MEDIA = False
-
 
 # Connection info for mapserver.
 # Leave these alone if you're not using one;
@@ -185,6 +193,8 @@ OPENLAYERS_URL = '/scripts/openlayers-2.9.1/OpenLayers.js'
 
 # Static media optimizations: whitespace slimming, URL timestamping.
 # see https://github.com/peterbe/django-static#readme
+# This supercedes the everyblock-specific template tags in
+# everyblock.templatetags.staticmedia.
 DJANGO_STATIC = True
 DJANGO_STATIC_MEDIA_ROOTS = [EB_MEDIA_ROOT,
                              EB_MEDIA_ROOT + '/styles',
@@ -193,6 +203,8 @@ DJANGO_STATIC_MEDIA_ROOTS = [EB_MEDIA_ROOT,
 
 # Putting django-static's output in a separate directory and URL space
 # makes it easier for git to ignore them.
+# XXX this breaks django_static's test suite
+
 DJANGO_STATIC_NAME_PREFIX = '/cache-forever'
 DJANGO_STATIC_SAVE_PREFIX = '%s%s' % (EB_MEDIA_ROOT, DJANGO_STATIC_NAME_PREFIX)
 

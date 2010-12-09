@@ -8,7 +8,10 @@
 
 /*
  * This map expects the following variables to be set:
- *
+
+ * newsitem (OPTIONAL) - a NewsItem id. If this is provided, only the relevant
+ * NewsItem is loaded.
+
  * pid (OPTIONAL) - a place ID like 'b:12.1' (see
  * ebpub.utils.view_utils for more info).
  *
@@ -20,7 +23,7 @@
  * eg. 'downtown', used for constructing a place URL.
  *
  * schema_slug (OPTIONAL) - slug of schema to filter on.
- * 
+ *
  * newsitems_ajax_url (OPTIONAL) - url to use for requesting features.
  *
  * map_bounds - an OpenLayers.Bounds() defining the default boundaries.
@@ -57,10 +60,12 @@ function loadNewsItems() {
     if (typeof(newsitems_ajax_url == "undefined")) {
         var newsitems_ajax_url = "/api/newsitems.geojson/"; /* WILL CHANGE */
     };
-    // TODO: Update this to limit the schemas we show, eg: newsitem_params['schema'] = 'events'
+    // Expect params to be set globally prior to calling this function.
+    var newsitem_params = {pid: '', schema: '', newsitem: ''};
 
-    // Expect pid to be set globally prior to calling this function.
-    var newsitem_params = {pid: '', schema: ''};
+    if (typeof(newsitem) != 'undefined') {
+        newsitem_params.newsitem = newsitem;
+    };
     if (typeof(pid) != 'undefined') {
         newsitem_params.pid = pid;
     };
@@ -193,7 +198,7 @@ function loadMap() {
         context: {
             radius: function(feature) {
 	        // Size of cluster, in pixels.
-                return 8 + Math.min(feature.attributes.count * 1.2, 14);
+                return 8 + Math.min(feature.attributes.count * 0.7, 14);
             },
             getlabel: function(feature) {
                 return feature.attributes.count;

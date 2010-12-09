@@ -6,6 +6,9 @@ from ebpub.utils.text import slugify
 import datetime
 
 
+FREQUENCY_CHOICES = ('Hourly', 'Throughout the day', 'Daily', 'Twice a week', 'Weekly', 'Twice a month', 'Monthly', 'Quarterly', 'Sporadically', 'No longer updated')
+FREQUENCY_CHOICES = [(a, a) for a in FREQUENCY_CHOICES]
+
 def field_mapping(schema_id_list):
     """
     Given a list of schema IDs, returns a dictionary of dictionaries, mapping
@@ -27,6 +30,19 @@ class SchemaManager(models.Manager):
 
     def get_by_natural_key(self, slug):
         return self.get(slug=slug)
+
+    def get_query_set(self):
+        return super(SchemaManager, self).get_query_set().defer(
+            'short_description',
+            'summary',
+            'source',
+            'grab_bag_headline',
+            'grab_bag',
+            'short_source',
+            'update_frequency',
+            'intro',
+            )
+
 
 class SchemaPublicManager(SchemaManager):
 
@@ -88,32 +104,16 @@ class Schema(models.Model):
         return self.slug
 
 
-class SchemaInfoManager(models.Manager):
-
-    def get_by_natural_key(self, schema_slug):
-        return self.get(schema__slug=schema_slug)
-
-class SchemaInfo(models.Model):
-    """Metadata about a Schema.
-    """
-
-    objects = SchemaInfoManager()
-
-    schema = models.ForeignKey(Schema)
+    # Metadata fields moved from SchemaInfo
     short_description = models.TextField(blank=True, default='')
     summary = models.TextField(blank=True, default='')
     source = models.TextField(blank=True, default='')
     grab_bag_headline = models.CharField(max_length=128, blank=True, default='')
     grab_bag = models.TextField(blank=True, default='')  # TODO: what does this field mean?
     short_source = models.CharField(max_length=128, blank=True, default='')
-    update_frequency = models.CharField(max_length=64, blank=True, default='')
+    update_frequency = models.CharField(max_length=64, blank=True, default='',
+                                        choices=FREQUENCY_CHOICES)
     intro = models.TextField(blank=True, default='')
-
-    def __unicode__(self):
-        return unicode(self.schema)
-
-    def natural_key(self):
-        return (self.schema.slug,)
 
 
 class SchemaFieldManager(models.Manager):
@@ -190,22 +190,6 @@ class SchemaField(models.Model):
             return self.pretty_name_plural
         return self.pretty_name
 
-
-class SchemaFieldInfoManager(models.Manager):
-    def get_by_natural_key(self, slug, real_name):
-        return self.get(schema__slug=slug, schema_field__real_name=real_name)
-
-class SchemaFieldInfo(models.Model):
-    objects = SchemaFieldInfoManager()
-    schema = models.ForeignKey(Schema)
-    schema_field = models.ForeignKey(SchemaField)
-    help_text = models.TextField()
-
-    def natural_key(self):
-        return (self.schema.slug, self.schema_field.real_name)
-
-    def __unicode__(self):
-        return unicode(self.schema_field)
 
 class LocationTypeManager(models.Manager):
     def get_by_natural_key(self, slug):
@@ -575,25 +559,22 @@ class NewsItem(models.Model):
         objects are ordered by SchemaField.display_order.
         """
         fields = SchemaField.objects.filter(schema__id=self.schema_id).select_related().order_by('display_order')
-        field_infos = dict([(obj.schema_field_id, obj.help_text) for obj in SchemaFieldInfo.objects.filter(schema__id=self.schema_id)])
-        
         if not fields:
             return []
-            
+
         try:
             attribute_row = Attribute.objects.filter(news_item__id=self.id).values(*[f.real_name for f in fields])[0]
         except KeyError:
             return []
-        return [AttributeForTemplate(f, attribute_row, field_infos.get(f.id, None)) for f in fields]
+        return [AttributeForTemplate(f, attribute_row) for f in fields]
 
 class AttributeForTemplate(object):
-    def __init__(self, schema_field, attribute_row, help_text):
+    def __init__(self, schema_field, attribute_row):
         self.sf = schema_field
         self.raw_value = attribute_row[schema_field.real_name]
         self.schema_slug = schema_field.schema.slug
         self.is_lookup = schema_field.is_lookup
         self.is_filter = schema_field.is_filter
-        self.help_text = help_text
         if self.is_lookup:
             if self.raw_value == '':
                 self.values = []
