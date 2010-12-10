@@ -1,4 +1,5 @@
 import re
+import string
 import sys
 import optparse
 from django.contrib.gis.gdal import DataSource
@@ -36,6 +37,8 @@ VALID_FCC_PREFIXES = (
     'A4'  # local, neighborhood, and rural road
 )
 
+ENCODING = 'cp1252'
+
 print >> sys.stderr, 'Starting block importer.'
 
 class EsriImporter(object):
@@ -48,7 +51,7 @@ class EsriImporter(object):
         self.fcc_pat = re.compile('^(' + '|'.join(VALID_FCC_PREFIXES) + ')\d$')
 
     def save(self, verbose=False):
-        alt_names_suff = ('',)
+        alt_names_suff = (u'',)
         num_created = 0
         for i, feature in enumerate(self.layer):
             #if not self.fcc_pat.search(feature.get('FCC')):
@@ -91,25 +94,32 @@ class EsriImporter(object):
                 if not name_fields['suffix'] and re.search('^\d+$', name_fields['street']):
                     continue
                 fields.update(name_fields)
-                block = Block(**fields)
-                block.geom = feature.geom.geos
-                print >> sys.stderr, 'Looking at block %s' % fields['street'].decode('cp1252').encode('utf8')
+                for key, val in fields.items():
+                    if isinstance(val, str):
+                        fields[key] = val.decode(ENCODING)
 
-                street_name, block_name = make_pretty_name(
-                    fields['left_from_num'].decode('cp1252'),
-                    fields['left_to_num'].decode('cp1252'),
-                    fields['right_from_num'].decode('cp1252'),
-                    fields['right_to_num'].decode('cp1252'),
-                    '',
-                    fields['street'].decode('cp1252'),
-                    fields['suffix'].decode('cp1252'),
-                    fields['postdir'].decode('cp1252')
+                fields['street_pretty_name'], fields['pretty_name'] = make_pretty_name(
+                    fields['left_from_num'],
+                    fields['left_to_num'],
+                    fields['right_from_num'],
+                    fields['right_to_num'],
+                    u'',
+                    fields['street'],
+                    fields['suffix'],
+                    fields['postdir'],
                 )
-                block.pretty_name = block_name
+
                 #print >> sys.stderr, 'Looking at block pretty name %s' % fields['street']
 
-                block.street_pretty_name = street_name
-                block.street_slug = slugify(' '.join((fields['street'].decode('cp1252'), fields['suffix'].decode('cp1252'))))
+                fields['street_slug'] = slugify(u' '.join((fields['street'], fields['suffix'])))
+
+                # Watch out for addresses like '247B' which can't be
+                # saved as an IntegerField.
+                for addr_key in ('left_from_num', 'left_to_num', 'right_from_num', 'right_to_num'):
+                    fields[addr_key] = fields[addr_key].rstrip(string.letters)
+                block = Block(**fields)
+                block.geom = feature.geom.geos
+                print >> sys.stderr, u'Looking at block %s' % fields['street']
 
                 block.save()
 
