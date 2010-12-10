@@ -96,21 +96,23 @@ class EsriImporter(object):
                 print >> sys.stderr, 'Looking at block %s' % fields['street'].decode('cp1252').encode('utf8')
 
                 street_name, block_name = make_pretty_name(
-                    fields['left_from_num'],
-                    fields['left_to_num'],
-                    fields['right_from_num'],
-                    fields['right_to_num'],
+                    fields['left_from_num'].decode('cp1252'),
+                    fields['left_to_num'].decode('cp1252'),
+                    fields['right_from_num'].decode('cp1252'),
+                    fields['right_to_num'].decode('cp1252'),
                     '',
-                    fields['street'].decode('cp1252').encode('utf8'),
-                    fields['suffix'].decode('cp1252').encode('utf8'),
-                    fields['postdir'].decode('cp1252').encode('utf8')
+                    fields['street'].decode('cp1252'),
+                    fields['suffix'].decode('cp1252'),
+                    fields['postdir'].decode('cp1252')
                 )
                 block.pretty_name = block_name
                 #print >> sys.stderr, 'Looking at block pretty name %s' % fields['street']
 
                 block.street_pretty_name = street_name
-                block.street_slug = slugify(' '.join((fields['street'].decode('cp1252').encode('utf8'), fields['suffix'].decode('cp1252').encode('utf8'))))
+                block.street_slug = slugify(' '.join((fields['street'].decode('cp1252'), fields['suffix'].decode('cp1252'))))
+
                 block.save()
+
                 if parent_id is None:
                     parent_id = block.id
                 else:
