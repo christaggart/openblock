@@ -9,6 +9,7 @@ from django.template import loader
 from ebpub.db.models import Attribute
 from ebpub.db.models import Location
 from ebpub.db.models import LocationType
+from ebpub.db.models import Lookup
 from ebpub.db.models import NewsItem
 from ebpub.db.models import Schema
 from ebpub.db.models import SchemaField
@@ -207,15 +208,15 @@ class OSMModelAdmin(admin.GeoModelAdmin):
                       }
         return OLMap
 
-class AttributeInline(admin.StackedInline):
-    # TODO: this badly needs a custom Form that takes into account the
-    # Schema and shows you only relevant fields, with labels.
-    model = Attribute
+# class AttributeInline(admin.StackedInline):
+#     # TODO: this badly needs a custom Form that takes into account the
+#     # Schema and shows you only relevant fields, with labels.
+#     model = Attribute
 
 class NewsItemAdmin(OSMModelAdmin):
-    inlines = [
-        AttributeInline,
-        ]
+    # inlines = [
+    #     AttributeInline,
+    #     ]
 
     list_display = ('title', 'schema', 'item_date', 'pub_date', 'location_name')
     list_filter = ('schema',)
@@ -223,6 +224,9 @@ class NewsItemAdmin(OSMModelAdmin):
 class LocationAdmin(OSMModelAdmin):
     pass
 
+class LookupAdmin(admin.ModelAdmin):
+    list_display = ('name', 'code', 'slug', 'schema_field')
+    list_filter = ('schema_field',)
 
 admin.site.register(Schema)
 admin.site.register(SchemaField)
@@ -230,4 +234,5 @@ admin.site.register(SchemaField)
 admin.site.register(NewsItem, NewsItemAdmin)
 admin.site.register(LocationType)
 admin.site.register(Location, LocationAdmin)
+admin.site.register(Lookup, LookupAdmin)
 
